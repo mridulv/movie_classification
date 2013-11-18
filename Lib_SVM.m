@@ -1,8 +1,8 @@
 close all;
 clear all;
-%clc;
+clc;
 
-numclusters = 20;
+total_error = [];
 trainset_percentage = 80;
 
 
@@ -21,13 +21,8 @@ ratings_train  = ratings(train_indices,:);
  
 
 load('movies_genre.mat');
-genre_size = zeros(1,19);
-for i=1:19
-    t = movies_genre(:,i);
-    genre_size(i) = size(find(t),1);
-end
- 
 
+ 
 user_profile_genre = zeros(size(train_indices,1), 19);
 for i=1:size(train_indices,1)
     k=0;
@@ -37,11 +32,8 @@ for i=1:size(train_indices,1)
             k=k+1;
         end
     end
-    user_profile_genre(i,:)= user_profile_genre(i,:)./k;
+    user_profile_genre(i,:)= user_profile_genre(i,:)/k;
 end
-
-movies_genre_modified=movies_genre;
-movies_genre_modified(find(movies_genre_modified==0))=-1;
 
 user_profile_rating = zeros(size(train_indices,1), 19);
  k=zeros(size(train_indices,1),19);
@@ -57,9 +49,9 @@ user_profile_rating = user_profile_rating./k;
 ix = isnan(user_profile_rating);
 user_profile_rating(find(ix)) = 0;
 
-
-
-IDX = kmeans(user_profile_rating, numclusters);    
+numclusters= 20;
+  
+IDX = kmeans(ratings_train_norm,numclusters); 
 
 fid = fopen('ml-100k\user.csv');
 mydata = textscan(fid, '%s');
@@ -78,10 +70,6 @@ occupations = {'administrator','artist','doctor','educator','engineer','entertai
 occupations_index = [1:21];
 occupations_mapping = containers.Map(occupations,occupations_index);
 
-% states = 'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DC', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'};
-% states_index = [1:51]
-% states_mapping = containers.Map(states, states_index)
-
 gender = {'M', 'F'};
 gender_index = [1:2];
 gender_mapping = containers.Map(gender,gender_index);
@@ -90,17 +78,12 @@ for i=1:size(data,1)
    user_data(i,1) = data{i,2};
    user_data(i,2) = gender_mapping(data{i,3});
    user_data(i,3) = occupations_mapping(data{i,4});
-   
 end
 
 
 
 X = user_data(train_indices,:);
 Y = IDX;
-
-
-
-save('method2_before_dt.mat');
 decision_tree = ClassificationTree.fit(X,Y,'CategoricalPredictors',[2 3], 'PredictorNames', {'Age','Gender','Occupation'});
 %view(decision_tree,'mode','graph') % graphic description
 
@@ -132,60 +115,24 @@ end
 test_indices = setdiff([1:943],train_indices)';
 test_clusters = predict(decision_tree, user_data(test_indices,:));
 
-
-threshold = [0.1];
- for i = 1 : size(test_indices,1)
-        c = test_clusters(i);
-        for j=1:size(ratings,2)
-            a = (movies_genre(j,:).*cluster_seen(c,:));
-            test_prob(i,j) = mean(a(find(a)));
-            test_prediction(i, j) = sum(movies_genre(j,:).*cluster_rating(c,:))/sum(movies_genre(j,:));
-        end
- end
- 
-
- 
- 
-a = ratings(test_indices,:);
-index1 = find(a);
-index2 = setdiff([1:size(test_indices,1)*size(ratings,2)],index1);
-error1 = zeros(size(threshold));
-error2 = zeros(size(threshold));
-for l = 1: size(threshold,2)
-    test_prediction1=zeros(size(test_indices,1), size(ratings,2));
-    for i = 1 : size(test_indices,1)
-        for j=1:size(ratings,2)
-            if test_prob(i,j)>threshold(l)
-                test_prediction1(i, j) = test_prediction(i, j);
-            end
+final_a = [];
+error_rating = [];
+val = [];
+counter = 0;
+for k=1:size(movies_genre,1)
+    error_rating = [];
+    k
+    for i=1:size(test_indices)
+        if ( ratings(test_indices(i),k) ~= 0 )
+            counter = 1;
+            dot_pro = dot(movies_genre(k,:),cluster_rating(test_clusters(i),:));    
+            error = dot_pro/size(find(movies_genre(k,:)),2) - ratings(test_indices(i),k);
+            error_rating = [error_rating error*error];
         end
     end
- count1 =0;
- count2=0;
- for i=1:size(test_prediction,1)
-     for j=1:size(test_prediction,2)
-         if ratings(test_indices(i),j)~=0
-             count2 = count2+1;
-             if test_prediction1(i,j)~=0
-             error1(l) = error1(l) + abs(ratings(test_indices(i),j) - test_prediction1(i,j))^2;
-              count1 = count1+1;
-             elseif test_prediction1(i,j)==0
-                 %count2 = count2+1;
-                 error2(l)=error2(l)+1;
-             end
-%          else 
-%              count2=count2+1;
-%              if test_prediction1(i,j)~=0
-%                  error2(l)=error2(l)+1;
-%              end
-         end
-     end
- end
- error1(l)=error1(l)/count1;
- error2(l) = error2(l)/count2;
-    %error1(l) = sum(abs(a(index1) - test_prediction1(index1)))/size(index1,1);
-    %error2(l) = size(find(test_prediction1(index2)),2)/size(index2,2);%mean(mean(abs(ratings(index2) - test_prediction1(index2))));
+    if (counter == 1)
+        val = [val mean(error_rating)];
+        counter = 0;
+    end
 end
-
-fprintf('Error in Predicting whether a user sees a movie: %f%%\n',error2*100);
-fprintf('NRMSE Error in Predicting the ratings: %f\n', sqrt(error1)/4);
+    total_error = [total_error;val];

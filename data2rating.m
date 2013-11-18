@@ -7,6 +7,10 @@ ratings = zeros(943,1682);
 for i=1:size(data,1)
     ratings(data(i,1), data(i,2)) = data(i,3);
 end
+mu_bar = 0;
+sigma_bar = 0;
+mu_movies=0;
+sigma_movies=0;
 Means = zeros(size(ratings,1),1);
 mu_i_hat = zeros(size(ratings,1),1);
 sigma_i_hat = zeros(size(ratings,1),1);

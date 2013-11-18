@@ -1,8 +1,8 @@
 close all;
 clear all;
-%clc;
+clc;
 
-numclusters = 20;
+numclusters_set = [10:10:80];
 trainset_percentage = 80;
 
 
@@ -12,7 +12,12 @@ ratings = zeros(943,1682);
 for i=1:size(matrix,1)
     ratings(matrix(i,1), matrix(i,2)) = matrix(i,3);
 end
+
+error1 = zeros(size(numclusters_set));
+error2 = zeros(size(numclusters_set));
  
+for l = 1: size(numclusters_set,2)
+    numclusters = numclusters_set(l);
  [train_data, test_data, train_indices] = splitdata(matrix, trainset_percentage);
  [norm_ratings,mu_bar, sigma_bar, mu_movies, sigma_movies] = data2rating(train_data, train_indices);
  ratings_train_norm = norm_ratings(train_indices,:);
@@ -149,13 +154,12 @@ threshold = [0.1];
 a = ratings(test_indices,:);
 index1 = find(a);
 index2 = setdiff([1:size(test_indices,1)*size(ratings,2)],index1);
-error1 = zeros(size(threshold));
-error2 = zeros(size(threshold));
-for l = 1: size(threshold,2)
+
+
     test_prediction1=zeros(size(test_indices,1), size(ratings,2));
     for i = 1 : size(test_indices,1)
         for j=1:size(ratings,2)
-            if test_prob(i,j)>threshold(l)
+            if test_prob(i,j)>threshold
                 test_prediction1(i, j) = test_prediction(i, j);
             end
         end
@@ -186,6 +190,12 @@ for l = 1: size(threshold,2)
     %error1(l) = sum(abs(a(index1) - test_prediction1(index1)))/size(index1,1);
     %error2(l) = size(find(test_prediction1(index2)),2)/size(index2,2);%mean(mean(abs(ratings(index2) - test_prediction1(index2))));
 end
-
-fprintf('Error in Predicting whether a user sees a movie: %f%%\n',error2*100);
-fprintf('NRMSE Error in Predicting the ratings: %f\n', sqrt(error1)/4);
+plot(numclusters_set,sqrt(error1)/4);
+xlabel('Number of clusters');
+ylabel('NRMSE');
+axis([10 80 0 0.5]);
+figure;
+plot(numclusters_set,error2);
+xlabel('Number of clusters');
+ylabel('Prediction Error');
+axis([10 80 0 0.2]);
