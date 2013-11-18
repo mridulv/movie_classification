@@ -1,7 +1,0 @@
-for i=1:size(test_indices)
-    if (test())
-        dot_pro = dot(movies_genre(k,:),cluster_rating(test_clusters(i),:));    
-        error = dot_pro/size(find(movies_genre(k,:)),2) - ratings(test_indices(i),k);
-        error_rating = [error_rating error^2];
-    end
-end
